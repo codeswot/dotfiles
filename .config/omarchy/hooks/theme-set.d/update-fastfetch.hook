@@ -1,0 +1,6 @@
+#!/bin/bash
+accent=$(omarchy-theme-color accent 2>/dev/null || echo "#509475")
+if [[ -f ~/.config/fastfetch/config.jsonc ]]; then
+  sed -i -E "s/\"1\": \"#[0-9a-fA-F]{6}\"/\"1\": \"$accent\"/g" ~/.config/fastfetch/config.jsonc
+  sed -i -E "s/\"keyColor\": \"#[0-9a-fA-F]{6}\"/\"keyColor\": \"$accent\"/g" ~/.config/fastfetch/config.jsonc
+fi

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# omarchy:summary=Display the {C}odeswot logo in the terminal using theme accent color.
+
+clear
+hex=$(omarchy-theme-color accent 2>/dev/null || echo "#509475")
+hex="${hex#\#}"
+if [[ $hex =~ ^[0-9a-fA-F]{6}$ ]]; then
+  r=$((16#${hex:0:2}))
+  g=$((16#${hex:2:2}))
+  b=$((16#${hex:4:2}))
+  echo -e "\033[38;2;${r};${g};${b}m"
+else
+  echo -e "\033[32m"
+fi
+
+if [[ -f ~/.config/omarchy/branding/logo.txt ]]; then
+  cat ~/.config/omarchy/branding/logo.txt
+elif [[ -n "$OMARCHY_PATH" && -f "$OMARCHY_PATH/logo.txt" ]]; then
+  cat "$OMARCHY_PATH/logo.txt"
+fi
+echo -e "\033[0m"
+echo
