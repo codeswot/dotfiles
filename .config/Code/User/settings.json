@@ -1,0 +1,62 @@
+{
+    "workbench.iconTheme": "material-icon-theme",
+    "[dart]": {
+        "editor.formatOnSave": true
+    },
+    "editor.fontLigatures": true,
+    "editor.fontFamily": "'JetBrainsMono Nerd Font', 'JetBrains Mono'",
+    "editor.fontSize": 13,
+    "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font', 'JetBrains Mono'",
+    "git.enableSmartCommit": true,
+    "git.confirmSync": false,
+    "chat.instructionsFilesLocations": {
+        ".github/instructions": true,
+        ".claude/rules": true,
+        "~/.copilot/instructions": true,
+        "~/.claude/rules": true
+    },
+    "claudeCode.preferredLocation": "panel",
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "rvest.vs-code-prettier-eslint"
+    },
+    "dart.warnWhenEditingFilesOutsideWorkspace": false,
+    "explorer.confirmDelete": false,
+    "[markdown]": {
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    },
+    "geminicodeassist.displayInlineContextHint": false,
+    "dart.flutterCreatePlatforms": [
+        "android",
+        "ios",
+        "linux",
+        "macos",
+        "windows"
+    ],
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "diffEditor.ignoreTrimWhitespace": true,
+    "json.schemaDownload.trustedDomains": {
+        "https://schemastore.azurewebsites.net/": true,
+        "https://raw.githubusercontent.com/microsoft/vscode/": true,
+        "https://raw.githubusercontent.com/devcontainers/spec/": true,
+        "https://www.schemastore.org/": true,
+        "https://json.schemastore.org/": true,
+        "https://json-schema.org/": true,
+        "https://developer.microsoft.com/json-schemas/": true,
+        "https://biomejs.dev": true
+    },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "workbench.browser.searchEngine": "google",
+    "workbench.colorTheme": "Visual Studio Dark",
+    "dart.flutterSdkPath": "/home/codeswot/tools/flutter",
+    "terminal.integrated.copyOnSelection": true
+}

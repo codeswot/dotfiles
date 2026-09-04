@@ -1,0 +1,62 @@
+[
+    {
+        "key": "ctrl+c",
+        "command": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus && terminalHasSelection"
+    },
+    {
+        "key": "meta+c",
+        "command": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus && terminalHasSelection"
+    },
+    {
+        "key": "ctrl+v",
+        "command": "workbench.action.terminal.paste",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "meta+v",
+        "command": "workbench.action.terminal.paste",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus && terminalHasSelection"
+    },
+    {
+        "key": "ctrl+shift+v",
+        "command": "workbench.action.terminal.paste",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+a",
+        "command": "workbench.action.terminal.selectAll",
+        "when": "terminalFocus && !terminalHasSelection"
+    },
+    {
+        "key": "meta+a",
+        "command": "workbench.action.terminal.selectAll",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+f",
+        "command": "workbench.action.terminal.focusFind",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "meta+f",
+        "command": "workbench.action.terminal.focusFind",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+k",
+        "command": "workbench.action.terminal.clear",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "meta+k",
+        "command": "workbench.action.terminal.clear",
+        "when": "terminalFocus"
+    }
+]
