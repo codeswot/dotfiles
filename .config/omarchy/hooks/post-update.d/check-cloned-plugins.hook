@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Warn when an Omarchy update changes a stock plugin that one of my local
+# plugins was cloned from (e.g. codeswot.menu <- omarchy.menu). Clones don't
+# receive upstream fixes, so they can silently break after an update.
+
+set -e
+
+plugins_dir="$HOME/.config/omarchy/plugins"
+stock_dir="${OMARCHY_PATH:-/usr/share/omarchy}/shell/plugins"
+state_dir="$HOME/.local/state/omarchy/clone-baselines"
+mkdir -p "$state_dir"
+
+changed=()
+
+for manifest in "$plugins_dir"/*/manifest.json; do
+  [[ -f $manifest ]] || continue
+  clone_id=$(jq -r '.id // empty' "$manifest")
+  source_id=$(jq -r '.omarchy.clonedFrom // empty' "$manifest")
+  [[ -n $clone_id && $source_id == omarchy.* ]] || continue
+
+  source_path="$stock_dir/${source_id#omarchy.}"
+  [[ -d $source_path ]] || continue
+
+  current=$(cd "$source_path" && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+  baseline_file="$state_dir/$clone_id"
+
+  if [[ -f $baseline_file && $(<"$baseline_file") != "$current" ]]; then
+    changed+=("$clone_id ← $source_id")
+  fi
+  echo "$current" > "$baseline_file"
+done
+
+if (( ${#changed[@]} )); then
+  omarchy-notification-send -u critical -g 󰏗 "Cloned plugins need review" \
+    "Omarchy changed the stock source of: ${changed[*]}. Check they still work, then back up with ~/dotfiles/sync.sh."
+fi

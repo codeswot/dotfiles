@@ -24,9 +24,12 @@ hl.config({
 
      blur = {
        enabled = true,
-       size = 5,
-       passes = 2,
+       size = 10,
+       passes = 3,
        new_optimizations = true,
+       vibrancy = 0.22,
+       contrast = 1.05,
+       brightness = 0.95,
      },
 
      -- Dim unfocused windows (0.0 = no dim, 1.0 = fully dimmed).
@@ -58,3 +61,11 @@ hl.config({
 --     column_width = 0.97,
 --   },
 -- })
+
+-- macOS Spotlight / Raycast blurred backdrop for omarchy-menu
+hl.layer_rule({
+  match = { namespace = "^(omarchy-menu)$" },
+  blur = true,
+  blur_popups = true,
+  ignore_alpha = 0.5,
+})

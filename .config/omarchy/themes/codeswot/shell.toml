@@ -174,17 +174,17 @@ selected-border-alpha     = 0.25
 # go from 0 (invisible) to 1 (opaque). scrim is the full-screen dim layer
 # behind the card. Clipboard and emojis inherit these tokens.
 background                = "#111c18"
-background-alpha          = 1.0
+background-alpha          = 0.93
 text                      = "#C1C497"
 border                    = "hyprland.active-border-foreground"
-border-alpha              = 1.0
-scrim                     = "#111c18"
-scrim-alpha               = 0.5
-selected-background       = "#C1C497"
-selected-background-alpha = 0.08
-selected-text             = "#509475"
+border-alpha              = 0.28
+scrim                     = "#090f0d"
+scrim-alpha               = 0.35
+selected-background       = "#509475"
+selected-background-alpha = 0.28
+selected-text             = "#F7E8B2"
 selected-border           = "hyprland.active-border-foreground"
-selected-border-alpha     = 0.25
+selected-border-alpha     = 0.35
 
 [polkit]
 # Polkit authentication prompt (sudo/password dialogs). scrim is the

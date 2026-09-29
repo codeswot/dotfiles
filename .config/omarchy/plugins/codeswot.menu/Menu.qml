@@ -77,7 +77,9 @@ Item {
 
   // Shared application engine (entries, hidden filters, icons, launch,
   // removal), owned by the shell and also used by the standalone launcher.
-  readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
+  // Omarchy 4.0.4 hands cloned menus a null appLibrary, so fall back to a
+  // private instance of the stock AppLibrary service (see fallbackAppLibrary).
+  readonly property var appLibrary: (root.shell && root.shell.appLibrary) ? root.shell.appLibrary : fallbackAppLibrary.item
   property bool deleteConfirmOpen: false
   property var deleteTarget: null
   onOpenedChanged: if (!opened) { deleteConfirmOpen = false; deleteTarget = null }
@@ -96,23 +98,28 @@ Item {
   readonly property real rowReservedBorderLeft: Border.left(selectedBorderSpec)
   readonly property real rowReservedBorderRight: Border.right(selectedBorderSpec)
   readonly property int cornerRadius: Style.cornerRadius
-  property int contentMargin: Style.spacing.panelPadding
-  property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)
-  property int contentSpacing: Style.spacing.md
-  property int baseRowHeight: Math.max(Style.space(50), Style.font.body + Style.spacing.rowPaddingX * 2)
-  property int detailRowHeight: Math.max(Style.space(58), Style.font.body + Style.font.caption + Style.spacing.rowPaddingX * 2)
+  readonly property color urgentColor: "#ff5345"
+  readonly property int cardRadius: Style.space(18)
+  readonly property int rowRadius: Style.space(10)
+  property int contentMargin: Style.space(12)
+  property int headerHeight: Style.space(58)
+  property int footerHeight: Style.space(72)
+  property int contentSpacing: Style.space(6)
+  property int baseRowHeight: Style.space(52)
+  property int detailRowHeight: Style.space(60)
   // How much of the first hidden row stays visible at the fold — enough to
   // read as a cut-off row rather than a bottom border.
-  property int rowPeek: Math.round(baseRowHeight * 0.55)
-  property int rowSpacing: Style.spacing.xs
-  property int dividerHeight: Style.space(17)
+  property int rowPeek: Math.round(baseRowHeight * 0.45)
+  property int rowSpacing: Style.space(4)
+  property int dividerHeight: Style.space(26)
   property bool searchDivider: false
   property int layoutSerial: 0
-  property int cardWidth: Math.min(root.dmenuActive ? Style.space(root.dmenuWidth) : ((root.activeMenu === "trigger.capture.screenrecord" || root.activeMenu === "style.font") ? Style.space(520) : Style.space(300)), panel.width - Style.gapsOut * 2)
+  property int cardWidth: Math.min(root.dmenuActive ? Math.max(Style.space(root.dmenuWidth), Style.space(560)) : Style.space(700), panel.width - Style.gapsOut * 4)
   property int visibleRowsHeight: root.dmenuActive ? dmenuRowListHeight(layoutSerial, displayModel.count, filterText) : rowListHeight(layoutSerial, displayModel.count, filterText, searchDivider)
+  readonly property int cardBorderWidth: Math.max(1, Style.space(2))
   property int cardHeight: root.dmenuActive
-    ? Math.min(contentMargin * 2 + headerHeight + (mode === "input" ? 0 : contentSpacing + visibleRowsHeight), panel.height - Style.gapsOut * 2)
-    : Math.min(contentMargin * 2 + headerHeight + contentSpacing + visibleRowsHeight, panel.height - Style.gapsOut * 2)
+    ? Math.min(headerHeight + 1 + (mode === "input" ? 0 : visibleRowsHeight + contentSpacing * 2 + 1 + footerHeight) + cardBorderWidth * 2, panel.height - Style.gapsOut * 2)
+    : Math.min(headerHeight + 1 + visibleRowsHeight + contentSpacing * 2 + 1 + footerHeight + cardBorderWidth * 2, panel.height - Style.gapsOut * 2)
 
   function finishRequest(selection) {
     if (!root.requestActive || !root.doneFile) {
@@ -152,13 +159,14 @@ Item {
   // Uses panel.cardTop rather than effectiveCardTop: the centered top is
   // derived from the card height, which this value feeds.
   function availableRowsHeight() {
-    var top = panel.cardTop >= 0 ? panel.cardTop : Style.gapsOut
-    var available = panel.height - top - Style.gapsOut - root.contentMargin * 2 - root.headerHeight - root.contentSpacing
+    var top = panel.cardTop >= 0 ? panel.cardTop : panel.centeredTop
+    var overhead = top + Style.gapsOut * 2 + root.headerHeight + 1 + root.contentSpacing * 2 + 1 + root.footerHeight + root.cardBorderWidth * 2 + Style.space(8)
+    var available = panel.height - overhead
     // The starting menu sets the ceiling along with the offset: drilling into
     // a longer submenu scrolls behind the fold instead of growing the card.
     if (panel.maxRowsHeight >= 0) available = Math.min(available, panel.maxRowsHeight)
     // A card that swallows the whole screen reads as a page, not a menu.
-    return Math.min(available, Math.round(panel.height * 0.7))
+    return Math.min(available, Math.round(panel.height * 0.52))
   }
 
   // When every row fits, the list gets its full height. When they don't,
@@ -166,7 +174,7 @@ Item {
   // more below the fold, so never come out even on a row boundary.
   function foldedListHeight(totals, available) {
     var count = totals.length
-    if (count === 0) return root.baseRowHeight
+    if (count === 0) return Style.space(140)
     if (totals[count - 1] <= available) return totals[count - 1]
 
     var peek = root.rowPeek
@@ -179,7 +187,7 @@ Item {
   }
 
   function rowListHeight(_serial, _count, _filter, _divider) {
-    if (displayModel.count === 0) return root.baseRowHeight
+    if (displayModel.count === 0) return Style.space(140)
 
     var totals = []
     var total = 0
@@ -199,7 +207,7 @@ Item {
 
   function dmenuRowListHeight(_serial, _count, _filter) {
     if (root.mode === "input") return 0
-    if (displayModel.count === 0) return root.baseRowHeight
+    if (displayModel.count === 0) return Style.space(140)
 
     var available = availableRowsHeight()
     if (root.dmenuMaxHeight > 0) available = Math.min(available, Style.space(root.dmenuMaxHeight))
@@ -809,6 +817,7 @@ Item {
     rebuildDisplay()
     invalidateVolatileProvider(activeMenu)
     loadProviderForMenu(activeMenu)
+    if (!root.providersLoaded["apps"]) root.startProviderForMenu("apps")
     // The shell may start before first-install packages have finished placing
     // their icons. Refresh here even when the desktop entry list did not change.
     if (root.appLibrary) root.appLibrary.refreshIcons()
@@ -907,6 +916,13 @@ Item {
   PointerMoveGate {
     id: pointerGate
     referenceItem: card
+  }
+
+  Loader {
+    id: fallbackAppLibrary
+    active: !(root.shell && root.shell.appLibrary)
+    source: "file://" + root.omarchyPath + "/shell/services/AppLibrary.qml"
+    onLoaded: if (root.providersLoaded["apps"]) root.mergeAppRows()
   }
 
   Connections {
@@ -1032,7 +1048,7 @@ Item {
     // card may grow from there. Closing unfreezes both.
     property int cardTop: -1
     property int maxRowsHeight: -1
-    readonly property int centeredTop: Math.max(Style.gapsOut, Math.round((height - root.cardHeight) / 2))
+    readonly property int centeredTop: Math.max(Style.gapsOut * 4, Math.round(panel.height * 0.20))
     readonly property int effectiveCardTop: cardTop >= 0 ? cardTop : centeredTop
     function freezeCardTop() {
       if (visible && cardTop < 0) {
@@ -1056,12 +1072,22 @@ Item {
       id: card
       width: root.cardWidth
       height: Math.min(root.cardHeight, panel.height - Style.gapsOut - panel.effectiveCardTop)
-      radius: root.cornerRadius
+      radius: root.cardRadius
       anchors.horizontalCenter: parent.horizontalCenter
       y: panel.effectiveCardTop
       color: root.background
       borderSpec: root.borderSpec
-      padding: root.contentMargin
+      padding: 0
+
+      // macOS specular inner border highlight
+      Rectangle {
+        anchors.fill: parent
+        radius: root.cardRadius
+        color: "transparent"
+        border.width: 1
+        border.color: Util.alpha("#ffffff", 0.08)
+        z: 2
+      }
 
       MouseArea { anchors.fill: parent; onClicked: {} }
 
@@ -1137,41 +1163,220 @@ Item {
       }
 
       Column {
-        anchors.fill: parent
+        id: columnLayout
+        anchors.top: parent.top
         anchors.topMargin: card.contentTopInset
-        anchors.rightMargin: card.contentRightInset
-        anchors.bottomMargin: card.contentBottomInset
+        anchors.left: parent.left
         anchors.leftMargin: card.contentLeftInset
-        spacing: root.contentSpacing
+        anchors.right: parent.right
+        anchors.rightMargin: card.contentRightInset
+        spacing: 0
 
-        Rectangle {
+        // Search Bar (Spotlight + Raycast style header)
+        Item {
+          id: headerContainer
           width: parent.width
           height: root.headerHeight
-          radius: root.cornerRadius
-          color: "transparent"
 
-          Text {
-            textFormat: Text.PlainText
+          Row {
             anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.leftMargin: Style.space(16)
+            anchors.right: headerTrailing.left
+            anchors.rightMargin: Style.space(12)
             anchors.verticalCenter: parent.verticalCenter
-            text: root.filterText || (root.dmenuActive ? (root.dmenuPrompt + "…") : ((root.item(root.activeMenu) ? (root.item(root.activeMenu).title || root.item(root.activeMenu).label) : "Go") + "…"))
-            color: root.foreground
-            opacity: root.filterText ? 1 : 0.58
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.heading
-            elide: Text.ElideRight
+            spacing: Style.space(12)
+
+            // Spotlight Search Icon
+            Text {
+              id: searchIcon
+              textFormat: Text.PlainText
+              text: ""
+              color: root.filterText ? root.selectedText : Util.alpha(root.foreground, 0.45)
+              font.family: root.fontFamily
+              font.pixelSize: Style.space(20)
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            // Breadcrumb tag if drilled down into a menu
+            Rectangle {
+              id: breadcrumbBadge
+              visible: root.activeMenu !== "root" && !root.dmenuActive
+              radius: Style.space(6)
+              color: Util.alpha(root.selectedText, 0.15)
+              border.width: 1
+              border.color: Util.alpha(root.selectedText, 0.25)
+              height: Style.space(26)
+              width: breadcrumbContent.width + Style.space(14)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Row {
+                id: breadcrumbContent
+                anchors.centerIn: parent
+                spacing: Style.space(4)
+
+                Text {
+                  text: "‹"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.weight: Font.Bold
+                  color: root.selectedText
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                  text: root.item(root.activeMenu) ? (root.item(root.activeMenu).label || root.activeMenu) : ""
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.weight: Font.Medium
+                  color: root.selectedText
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.goBack()
+              }
+            }
+
+            // Search query or placeholder with typing cursor
+            Item {
+              id: searchInputArea
+              height: parent.height
+              width: headerContainer.width - searchIcon.width - (breadcrumbBadge.visible ? breadcrumbBadge.width + Style.space(12) : 0) - headerTrailing.width - Style.space(46)
+              anchors.verticalCenter: parent.verticalCenter
+              clip: true
+
+              Text {
+                id: placeholderText
+                visible: !root.filterText
+                textFormat: Text.PlainText
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: {
+                  if (root.dmenuActive) return root.dmenuPrompt + "…"
+                  if (root.activeMenu === "root") return "Search apps, commands, or settings…"
+                  var item = root.item(root.activeMenu)
+                  return "Search " + (item ? (item.title || item.label) : "in menu") + "…"
+                }
+                color: root.foreground
+                opacity: 0.42
+                font.family: root.fontFamily
+                font.pixelSize: Style.space(18)
+                elide: Text.ElideRight
+              }
+
+              Row {
+                visible: !!root.filterText
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(2)
+
+                Text {
+                  id: queryText
+                  textFormat: Text.PlainText
+                  text: root.filterText
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.space(18)
+                  font.weight: Font.Medium
+                }
+
+                Rectangle {
+                  id: cursorBlinker
+                  width: 2
+                  height: Style.space(22)
+                  color: root.selectedText
+                  anchors.verticalCenter: parent.verticalCenter
+
+                  SequentialAnimation on opacity {
+                    loops: Animation.Infinite
+                    running: root.opened
+                    PropertyAnimation { to: 1.0; duration: 500 }
+                    PropertyAnimation { to: 0.0; duration: 500 }
+                  }
+                }
+              }
+            }
           }
 
+          // Trailing affordances (Clear button or Raycast shortcut badge)
+          Row {
+            id: headerTrailing
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(14)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(6)
+
+            Rectangle {
+              visible: !!root.filterText
+              radius: Style.space(11)
+              width: Style.space(22)
+              height: Style.space(22)
+              color: Util.alpha(root.foreground, 0.12)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Text {
+                anchors.centerIn: parent
+                text: "✕"
+                font.family: root.fontFamily
+                font.pixelSize: Style.space(10)
+                font.weight: Font.Bold
+                color: root.foreground
+                opacity: 0.7
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.setFilter("")
+              }
+            }
+
+            Rectangle {
+              visible: !root.filterText
+              radius: Style.space(6)
+              height: Style.space(22)
+              width: shortcutBadgeText.width + Style.space(14)
+              color: Util.alpha(root.foreground, 0.06)
+              border.width: 1
+              border.color: Util.alpha(root.foreground, 0.12)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Text {
+                id: shortcutBadgeText
+                anchors.centerIn: parent
+                text: "⌘ Space"
+                font.family: root.fontFamily
+                font.pixelSize: Style.space(10)
+                font.weight: Font.Medium
+                color: Util.alpha(root.foreground, 0.45)
+              }
+            }
+          }
         }
 
+        // Header separator
+        Rectangle {
+          width: parent.width
+          height: 1
+          color: Util.alpha(root.foreground, 0.16)
+        }
+
+        // Results Container
         Item {
           width: parent.width
-          height: root.visibleRowsHeight
+          height: (root.mode === "input" ? 0 : root.visibleRowsHeight + root.contentSpacing * 2)
+          visible: root.mode !== "input"
 
           ListView {
             id: resultList
             anchors.fill: parent
+            anchors.leftMargin: root.contentMargin
+            anchors.rightMargin: root.contentMargin
+            anchors.topMargin: root.contentSpacing
+            anchors.bottomMargin: root.contentSpacing
             model: displayModel
             clip: true
             spacing: root.rowSpacing
@@ -1186,18 +1391,34 @@ Item {
               height: section === "drilldown" ? root.dividerHeight : 0
               visible: section === "drilldown"
 
+              Row {
+                anchors.left: parent.left
+                anchors.leftMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(6)
+
+                Text {
+                  text: "Other Matches"
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.weight: Font.DemiBold
+                  color: Util.alpha(root.foreground, 0.45)
+                  textFormat: Text.PlainText
+                }
+              }
+
               Rectangle {
                 anchors.left: parent.left
-                anchors.leftMargin: Style.space(4)
+                anchors.leftMargin: Style.space(110)
                 anchors.right: parent.right
-                anchors.rightMargin: Style.space(4)
+                anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
-                height: Style.spacing.hairline
-                color: Util.alpha(root.foreground, 0.2)
+                height: 1
+                color: Util.alpha(root.foreground, 0.08)
               }
             }
 
-            delegate: BorderSurface {
+            delegate: Rectangle {
               id: row
               required property int index
               required property string itemId
@@ -1219,62 +1440,61 @@ Item {
 
               width: ListView.view.width
               height: root.rowHeightForDetail(row.detail)
-              radius: root.cornerRadius
+              radius: root.rowRadius
               color: row.hasCursor ? root.selectedBackground : "transparent"
-              borderSpec: row.hasCursor ? root.selectedBorderSpec : Border.none()
+              border.width: row.hasCursor ? 1 : 0
+              border.color: row.hasCursor ? Util.alpha(root.selectedText, 0.28) : "transparent"
 
+              Behavior on color {
+                ColorAnimation { duration: 100 }
+              }
+
+              // Left Icon Container
               Rectangle {
-                visible: false
-                width: Style.space(4)
-                height: parent.height - Style.space(18)
-                radius: Math.min(root.cornerRadius, Style.space(4))
-                color: root.selectedBackground
+                id: iconContainer
+                width: Style.space(34)
+                height: Style.space(34)
+                radius: Style.space(8)
+                color: row.isApp
+                  ? "transparent"
+                  : (row.hasCursor ? Util.alpha(root.selectedText, 0.20) : Util.alpha(root.foreground, 0.07))
+                border.width: row.isApp ? 0 : 1
+                border.color: row.hasCursor ? Util.alpha(root.selectedText, 0.35) : Util.alpha(root.foreground, 0.10)
                 anchors.left: parent.left
-                anchors.leftMargin: root.rowReservedBorderLeft + Style.space(8)
+                anchors.leftMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
+                clip: true
+
+                Image {
+                  visible: row.isApp
+                  anchors.fill: parent
+                  fillMode: Image.PreserveAspectFit
+                  sourceSize.width: width * Screen.devicePixelRatio
+                  sourceSize.height: height * Screen.devicePixelRatio
+                  source: row.isApp && root.appLibrary ? root.appLibrary.iconSource(row.appIcon) : ""
+                  asynchronous: true
+                }
+
+                Text {
+                  visible: !row.isApp
+                  anchors.centerIn: parent
+                  textFormat: Text.PlainText
+                  text: row.icon || (row.kind === "menu" ? "" : (row.kind === "link" ? "" : ""))
+                  color: row.hasCursor ? root.selectedText : root.foreground
+                  font.family: row.iconFont.length > 0 ? row.iconFont : root.fontFamily
+                  font.pixelSize: Style.space(16)
+                }
               }
 
-              Text {
-                id: iconText
-                textFormat: Text.PlainText
-                visible: row.hasIcon && !row.isApp
-                text: row.icon
-                color: row.hasCursor ? root.selectedText : root.foreground
-                font.family: row.iconFont.length > 0 ? row.iconFont : root.fontFamily
-                font.pixelSize: Style.font.iconLarge
-                width: Style.space(36)
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                anchors.left: parent.left
-                anchors.leftMargin: root.rowReservedBorderLeft + Style.space(8)
-                y: contentColumn.y + labelText.y + (labelText.height - height) / 2
-              }
-
-              Image {
-                id: appIconImage
-                visible: row.isApp
-                width: Style.font.iconLarge
-                height: Style.font.iconLarge
-                fillMode: Image.PreserveAspectFit
-                // Decode at physical pixels — a logical-size decode leaves
-                // PNG icons upscaled and blurry on HiDPI displays.
-                sourceSize.width: width * Screen.devicePixelRatio
-                sourceSize.height: height * Screen.devicePixelRatio
-                source: row.isApp && root.appLibrary ? root.appLibrary.iconSource(row.appIcon) : ""
-                asynchronous: true
-                anchors.left: parent.left
-                anchors.leftMargin: root.rowReservedBorderLeft + Style.space(8) + (Style.space(36) - width) / 2
-                y: contentColumn.y + labelText.y + (labelText.height - height) / 2
-              }
-
+              // Center text
               Column {
                 id: contentColumn
-                anchors.left: row.hasIcon ? iconText.right : parent.left
-                anchors.leftMargin: row.hasIcon ? Style.space(6) : root.rowReservedBorderLeft + Style.space(18)
-                anchors.right: trail.left
-                anchors.rightMargin: Style.space(6)
+                anchors.left: iconContainer.right
+                anchors.leftMargin: Style.space(12)
+                anchors.right: accessoryRow.left
+                anchors.rightMargin: Style.space(10)
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Style.space(3)
+                spacing: Style.space(2)
 
                 Text {
                   id: labelText
@@ -1283,52 +1503,91 @@ Item {
                   text: row.label
                   color: row.hasCursor ? root.selectedText : root.foreground
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.heading
-                  font.weight: Font.Medium
+                  font.pixelSize: Style.font.body
+                  font.weight: row.hasCursor ? Font.DemiBold : Font.Medium
                   elide: Text.ElideRight
                 }
 
                 Text {
+                  id: detailText
                   textFormat: Text.PlainText
                   width: parent.width
                   text: row.detail
-                  visible: (root.filterText || row.kind === "dmenu") && row.detail.length > 0
-                  color: root.foreground
-                  opacity: 0.52
+                  visible: (root.filterText || row.kind === "dmenu" || row.isApp) && row.detail.length > 0
+                  color: row.hasCursor ? Util.alpha(root.selectedText, 0.75) : Util.alpha(root.foreground, 0.50)
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.bodySmall
+                  font.pixelSize: Style.font.caption
                   elide: Text.ElideRight
                 }
               }
 
+              // Right Accessory (Raycast tag + enter affordance)
               Row {
-                id: trail
-                width: Style.space(14)
+                id: accessoryRow
                 anchors.right: parent.right
-                anchors.rightMargin: root.rowReservedBorderRight + Style.space(8)
-                y: contentColumn.y + labelText.y + (labelText.height - height) / 2
-                spacing: 0
+                anchors.rightMargin: Style.space(12)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.space(6)
 
+                // Category Tag
+                Rectangle {
+                  radius: Style.space(5)
+                  color: row.hasCursor ? Util.alpha(root.selectedText, 0.14) : Util.alpha(root.foreground, 0.06)
+                  border.width: 1
+                  border.color: row.hasCursor ? Util.alpha(root.selectedText, 0.25) : Util.alpha(root.foreground, 0.08)
+                  height: Style.space(22)
+                  width: categoryText.width + Style.space(14)
+                  anchors.verticalCenter: parent.verticalCenter
+                  visible: !row.isApp || row.hasCursor
+
+                  Text {
+                    id: categoryText
+                    anchors.centerIn: parent
+                    textFormat: Text.PlainText
+                    text: {
+                      if (row.isApp) return "Application"
+                      if (row.kind === "menu") return "Submenu"
+                      if (row.kind === "link") return "Link"
+                      if (row.kind === "dmenu") return "Option"
+                      return "Command"
+                    }
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.space(10)
+                    font.weight: Font.Medium
+                    color: row.hasCursor ? Util.alpha(root.selectedText, 0.85) : Util.alpha(root.foreground, 0.45)
+                  }
+                }
+
+                // Chevron for menus/links
                 Text {
+                  visible: row.kind === "menu" || row.kind === "link"
                   textFormat: Text.PlainText
-                  visible: false
-                  text: row.childCount
-                  color: root.foreground
-                  opacity: 0.45
+                  text: row.kind === "link" ? "↗" : "›"
+                  color: row.hasCursor ? root.selectedText : Util.alpha(root.foreground, 0.4)
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
+                  font.pixelSize: Style.font.title
                   anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Text {
-                  textFormat: Text.PlainText
-                  text: row.kind === "menu" || row.kind === "link" ? "›" : ""
-                  color: row.hasCursor ? root.selectedText : root.foreground
-                  opacity: row.kind === "menu" || row.kind === "link" ? 0.36 : 0
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.heading
-                  font.weight: Font.Normal
+                // Enter / Return hint on selected action or app
+                Rectangle {
+                  visible: row.hasCursor && (row.kind === "action" || row.isApp || row.kind === "dmenu")
+                  radius: Style.space(4)
+                  color: Util.alpha(root.selectedText, 0.18)
+                  border.width: 1
+                  border.color: Util.alpha(root.selectedText, 0.35)
+                  height: Style.space(20)
+                  width: Style.space(22)
                   anchors.verticalCenter: parent.verticalCenter
+
+                  Text {
+                    anchors.centerIn: parent
+                    textFormat: Text.PlainText
+                    text: "↵"
+                    font.pixelSize: Style.space(11)
+                    font.weight: Font.Bold
+                    color: root.selectedText
+                  }
                 }
               }
 
@@ -1353,17 +1612,12 @@ Item {
             }
           }
 
-          // Scroll scrims. The clipped row already marks the fold at rest;
-          // these keep both edges honest once the list has been scrolled,
-          // when content hides above the card top as well as below. Strength
-          // tracks the distance still hidden past each edge rather than
-          // animating on a clock, so a programmatic jump — wrapping from the
-          // last row back to the first — lands with the fade already applied.
+          // Top and Bottom Scroll Gradients
           Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            height: Math.min(Style.space(28), parent.height / 2)
+            height: Math.min(Style.space(24), parent.height / 2)
             visible: opacity > 0
             opacity: resultList.contentHeight > resultList.height
               ? Math.max(0, Math.min(1, (resultList.contentY - resultList.originY) / height))
@@ -1378,7 +1632,7 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            height: Math.min(Style.space(28), parent.height / 2)
+            height: Math.min(Style.space(24), parent.height / 2)
             visible: opacity > 0
             opacity: resultList.contentHeight > resultList.height
               ? Math.max(0, Math.min(1, (resultList.originY + resultList.contentHeight - resultList.height - resultList.contentY) / height))
@@ -1389,37 +1643,223 @@ Item {
             }
           }
 
+          // Empty state
           Column {
             anchors.centerIn: parent
-            spacing: Style.space(8)
+            spacing: Style.space(10)
             visible: displayModel.count === 0 && root.mode !== "input"
 
-            Text {
-              text: "󰈉"
-              color: root.selectedText
-              opacity: 0.8
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.displayLarge
-              horizontalAlignment: Text.AlignHCenter
-              width: Style.space(320)
+            Rectangle {
+              width: Style.space(48)
+              height: Style.space(48)
+              radius: Style.space(14)
+              color: Util.alpha(root.foreground, 0.07)
+              border.width: 1
+              border.color: Util.alpha(root.foreground, 0.12)
+              anchors.horizontalCenter: parent.horizontalCenter
+
+              Text {
+                anchors.centerIn: parent
+                text: ""
+                color: Util.alpha(root.foreground, 0.5)
+                font.family: root.fontFamily
+                font.pixelSize: Style.space(20)
+              }
             }
 
             Text {
               textFormat: Text.PlainText
               text: root.filterText ? "No matches for “" + root.filterText + "”" : "Nothing here yet"
               color: root.foreground
-              opacity: 0.7
+              opacity: 0.85
               font.family: root.fontFamily
-              font.pixelSize: Style.font.title
+              font.pixelSize: Style.font.heading
+              font.weight: Font.DemiBold
               horizontalAlignment: Text.AlignHCenter
-              width: Style.space(320)
+            }
+
+            Text {
+              textFormat: Text.PlainText
+              text: "Try searching for an app, command, or setting"
+              color: Util.alpha(root.foreground, 0.45)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              horizontalAlignment: Text.AlignHCenter
             }
           }
         }
 
-        Item {
+        // Footer separator
+        Rectangle {
+          visible: root.mode !== "input"
           width: parent.width
-          height: 0
+          height: 1
+          color: Util.alpha(root.foreground, 0.16)
+        }
+
+        // Raycast-style action bar / footer
+        Item {
+          id: footerContainer
+          visible: root.mode !== "input"
+          width: parent.width
+          height: root.footerHeight
+
+          // Left side: Context badge / Result counter
+          Row {
+            anchors.left: parent.left
+            anchors.leftMargin: Style.space(26)
+            anchors.top: parent.top
+            anchors.topMargin: Style.space(14)
+            spacing: Style.space(8)
+
+            Text {
+              text: "󰍉"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              color: Util.alpha(root.foreground, 0.5)
+              anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+              textFormat: Text.PlainText
+              text: {
+                if (root.filterText.trim().length > 0) {
+                  return displayModel.count + (displayModel.count === 1 ? " result" : " results")
+                }
+                if (root.activeMenu === "root") return "Spotlight"
+                var activeItem = root.item(root.activeMenu)
+                return "Spotlight › " + (activeItem ? (activeItem.label || activeItem.title) : root.activeMenu)
+              }
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              color: Util.alpha(root.foreground, 0.5)
+              anchors.verticalCenter: parent.verticalCenter
+            }
+          }
+
+          // Right side: Raycast action pills
+          Row {
+            anchors.right: parent.right
+            anchors.rightMargin: Style.space(26)
+            anchors.top: parent.top
+            anchors.topMargin: Style.space(14)
+            spacing: Style.space(12)
+
+            // Delete / Uninstall pill (if app can be uninstalled)
+            Row {
+              visible: {
+                if (displayModel.count === 0 || root.selectedIndex < 0 || root.selectedIndex >= displayModel.count) return false
+                var cur = displayModel.get(root.selectedIndex)
+                return cur && cur.kind === "app"
+              }
+              spacing: Style.space(4)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Rectangle {
+                radius: Style.space(5)
+                color: Util.alpha(root.urgentColor, 0.15)
+                border.width: 1
+                border.color: Util.alpha(root.urgentColor, 0.35)
+                height: Style.space(22)
+                width: deletePillText.width + Style.space(12)
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  id: deletePillText
+                  anchors.centerIn: parent
+                  text: "Del"
+                  font.pixelSize: Style.space(10)
+                  font.weight: Font.Bold
+                  color: root.urgentColor
+                }
+              }
+
+              Text {
+                text: "Uninstall"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                color: Util.alpha(root.foreground, 0.6)
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            // Back / Clear pill
+            Row {
+              visible: root.activeMenu !== "root" || root.filterText.length > 0
+              spacing: Style.space(4)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Rectangle {
+                radius: Style.space(5)
+                color: Util.alpha(root.foreground, 0.1)
+                border.width: 1
+                border.color: Util.alpha(root.foreground, 0.2)
+                height: Style.space(22)
+                width: escPillText.width + Style.space(12)
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  id: escPillText
+                  anchors.centerIn: parent
+                  text: "Esc"
+                  font.pixelSize: Style.space(10)
+                  font.weight: Font.Bold
+                  color: root.foreground
+                }
+              }
+
+              Text {
+                text: root.filterText.length > 0 ? "Clear" : "Back"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                color: Util.alpha(root.foreground, 0.6)
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+
+            // Primary Enter action pill
+            Row {
+              visible: displayModel.count > 0
+              spacing: Style.space(5)
+              anchors.verticalCenter: parent.verticalCenter
+
+              Rectangle {
+                radius: Style.space(5)
+                color: Util.alpha(root.selectedText, 0.18)
+                border.width: 1
+                border.color: Util.alpha(root.selectedText, 0.4)
+                height: Style.space(22)
+                width: enterPillText.width + Style.space(12)
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  id: enterPillText
+                  anchors.centerIn: parent
+                  text: "↵"
+                  font.pixelSize: Style.space(12)
+                  font.weight: Font.Bold
+                  color: root.selectedText
+                }
+              }
+
+              Text {
+                text: {
+                  if (displayModel.count === 0 || root.selectedIndex < 0 || root.selectedIndex >= displayModel.count) return "Open"
+                  var cur = displayModel.get(root.selectedIndex)
+                  if (!cur) return "Open"
+                  if (cur.kind === "menu") return "Enter"
+                  if (cur.kind === "link") return "Visit"
+                  if (cur.kind === "dmenu") return "Select"
+                  return "Open"
+                }
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.weight: Font.DemiBold
+                color: root.selectedText
+                anchors.verticalCenter: parent.verticalCenter
+              }
+            }
+          }
         }
       }
     }

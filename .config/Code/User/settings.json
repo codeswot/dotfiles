@@ -58,5 +58,10 @@
     "workbench.browser.searchEngine": "google",
     "workbench.colorTheme": "Visual Studio Dark",
     "dart.flutterSdkPath": "/home/codeswot/tools/flutter",
-    "terminal.integrated.copyOnSelection": true
+    "terminal.integrated.copyOnSelection": true,
+    "security.allowedUNCHosts": [
+        "wsl.localhost"
+    ],
+    "claudeCode.hideOnboarding": true,
+    "chat.sessionSync.enabled": true
 }

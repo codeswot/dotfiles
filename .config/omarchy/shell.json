@@ -6,7 +6,7 @@
   },
   "bar": {
     "position": "top",
-    "transparent": false,
+    "transparent": true,
     "centerAnchor": "omarchy.clock",
     "layout": {
       "left": [
@@ -22,6 +22,9 @@
           "id": "omarchy.indicators"
         },
         {
+          "id": "njpatel.omapager"
+        },
+        {
           "id": "omarchy.clock",
           "format": "dddd HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
@@ -32,6 +35,9 @@
         },
         {
           "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.menu"
         },
         {
           "id": "omarchy.system-update"
@@ -68,11 +74,18 @@
   "plugins": [
     {
       "id": "codeswot.lock"
+    },
+    {
+      "id": "io.github.iryzhkov.omadeck"
+    },
+    {
+      "id": "njpatel.omapager"
     }
   ],
   "disabledPlugins": [
     "omarchy.menu",
-    "omarchy.lock"
+    "omarchy.lock",
+    "omarchy.notifications"
   ],
   "cloneSourceRestores": [
     "codeswot.menu",
