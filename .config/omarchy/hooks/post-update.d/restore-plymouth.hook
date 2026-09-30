@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# omarchy plymouth set writes into package-owned files under
+# /usr/share/plymouth/themes/omarchy, so every Omarchy package update resets
+# the boot/unlock screen to stock. Re-apply the codeswot one when that happens.
+
+theme=codeswot
+
+case $(omarchy-plymouth-current) in
+  "$theme" | "{c}odeswot") exit 0 ;;
+esac
+
+if ! omarchy plymouth set by theme "$theme"; then
+  omarchy-notification-send -u critical -g 󰌾 "Boot screen reset to Omarchy" \
+    "Couldn't restore the codeswot boot screen. Run: omarchy plymouth set by theme $theme"
+fi
